@@ -46,19 +46,23 @@ pushd "$URIPARSER_SOURCE_DIR"
             rm "$stage"/version.{obj,exe}
 
             cmake . -G "$AUTOBUILD_WIN_CMAKE_GEN" \
-                  -DCMAKE_INSTALL_PREFIX:STRING="$(cygpath -w ${stage})" \
-                  -DCMAKE_CXX_FLAGS="$LL_BUILD_RELEASE" \
-                  -DCMAKE_C_FLAGS="$LL_BUILD_RELEASE" \
-                  -DURIPARSER_BUILD_TESTS=OFF \
-                  -DURIPARSER_BUILD_DOCS=OFF
+                -A $AUTOBUILD_WIN_VSPLATFORM \
+                -DCMAKE_INSTALL_PREFIX:STRING="$(cygpath -w ${stage})" \
+                -DCMAKE_CXX_FLAGS="$LL_BUILD_RELEASE" \
+                -DCMAKE_C_FLAGS="$LL_BUILD_RELEASE" \
+                -DURIPARSER_BUILD_TESTS=OFF \
+                -DURIPARSER_BUILD_DOCS=OFF
 
-            build_sln "uriparser.sln" "Release|$AUTOBUILD_WIN_VSPLATFORM" "uriparser"
+            msbuild.exe \
+                "uriparser.sln" \
+                -t:uriparser \
+                -p:Configuration=Release \
+                -p:Platform=$AUTOBUILD_WIN_VSPLATFORM \
+                -p:PlatformToolset=v143
 
             mkdir -p "$stage/lib/release"
-            cp -a "Release/uriparser.lib" \
-                "$stage/lib/release/uriparser.lib"
-            cp -a "Release/uriparser.dll" \
-                "$stage/lib/release/uriparser.dll"
+            cp -a "Release/uriparser.lib" "$stage/lib/release/uriparser.lib"
+            cp -a "Release/uriparser.dll" "$stage/lib/release/uriparser.dll"
             mkdir -p "$stage/include/uriparser"
             cp -a include/uriparser/*.h "$stage/include/uriparser"
         ;;
@@ -76,7 +80,7 @@ pushd "$URIPARSER_SOURCE_DIR"
                   -DCMAKE_C_FLAGS="$LL_BUILD_RELEASE" \
                   -DURIPARSER_BUILD_TESTS=OFF \
                   -DURIPARSER_BUILD_DOCS=OFF
-            make
+            make -j$(nproc)
             make install
 
             stage_lib="${stage}"/lib
@@ -91,24 +95,8 @@ pushd "$URIPARSER_SOURCE_DIR"
             # Make sure libs are stamped with the -id
             # fix_dylib_id doesn't really handle symlinks
             pushd "$stage_release"
-            fix_dylib_id "liburiparser.1.0.27.dylib" || \
-                echo "fix_dylib_id liburiparser.dylib failed, proceeding"
-            fix_dylib_id "liburiparser.1.dylib" || \
-                echo "fix_dylib_id liburiparser.dylib failed, proceeding"
-
-            CONFIG_FILE="$build_secrets_checkout/code-signing-osx/config.sh"
-            if [ -f "$CONFIG_FILE" ]; then
-                source $CONFIG_FILE
-                for dylib in lib*.dylib;
-                do
-                    if [ -f "$dylib" ]; then
-                        codesign --force --timestamp --sign "$APPLE_SIGNATURE" "$dylib"
-                    fi
-                done
-            else 
-                echo "No config file found; skipping codesign."
-            fi
-            popd
+            fix_dylib_id "liburiparser.1.0.27.dylib" || echo "fix_dylib_id liburiparser.dylib failed, proceeding"
+            fix_dylib_id "liburiparser.1.dylib" || echo "fix_dylib_id liburiparser.dylib failed, proceeding"
         ;;
 
         linux*)
@@ -139,7 +127,7 @@ pushd "$URIPARSER_SOURCE_DIR"
                   -DURIPARSER_BUILD_TESTS=OFF \
                   -DURIPARSER_BUILD_DOCS=OFF -DBUILD_SHARED_LIBS=OFF
 
-            make -j $AUTOBUILD_CPU_COUNT
+            make -j$(nproc)
             make install
 
             popd
@@ -150,5 +138,5 @@ pushd "$URIPARSER_SOURCE_DIR"
     esac
     mkdir -p "$stage/LICENSES"
     pwd
-    cp -a COPYING "$stage/LICENSES/uriparser.txt"
+    cp -a "${top}/uriparser/COPYING" "$stage/LICENSES/uriparser.txt"
 popd
