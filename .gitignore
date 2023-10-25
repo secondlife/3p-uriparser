@@ -5,3 +5,8 @@ uriparser/Win32
 stage/
 *.tar.bz2
 uriparser/CMakeCache.txt
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.proj
+*.proj.filters
