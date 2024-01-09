@@ -81,6 +81,7 @@ pushd "$URIPARSER_SOURCE_DIR"
             cmake . -DCMAKE_INSTALL_PREFIX:STRING="${stage}" \
                   -DCMAKE_CXX_FLAGS="$LL_BUILD_RELEASE" \
                   -DCMAKE_C_FLAGS="$(remove_cxxstd $LL_BUILD_RELEASE)" \
+                  -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
                   -DURIPARSER_BUILD_TESTS=OFF \
                   -DURIPARSER_BUILD_DOCS=OFF
             make -j$(nproc)
